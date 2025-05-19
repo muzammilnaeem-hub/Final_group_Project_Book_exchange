@@ -1,133 +1,98 @@
-// Copyright 2022 The Flutter Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
-import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-
-import 'app_state.dart';
-import 'home_page.dart';
+import 'screens/home_screen.dart';
+import 'screens/book_details_screen.dart';
+import 'screens/my_listings_screen.dart';
+import 'screens/favorites_screen.dart';
+import 'screens/profile_screen.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  runApp(
-    ChangeNotifierProvider(
-      create: (context) => ApplicationState(),
-      builder: ((context, child) => const App()),
-    ),
-  );
+  runApp(BookExchangeApp());
 }
 
-final _router = GoRouter(
-  routes: [
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const HomePage(),
-      routes: [
-        GoRoute(
-          path: 'sign-in',
-          builder: (context, state) {
-            return SignInScreen(
-              actions: [
-                ForgotPasswordAction(((context, email) {
-                  final uri = Uri(
-                    path: '/sign-in/forgot-password',
-                    queryParameters: <String, String?>{'email': email},
-                  );
-                  context.push(uri.toString());
-                })),
-                AuthStateChangeAction(((context, state) {
-                  final user = switch (state) {
-                    SignedIn state => state.user,
-                    UserCreated state => state.credential.user,
-                    _ => null,
-                  };
-                  if (user == null) {
-                    return;
-                  }
-                  if (state is UserCreated) {
-                    user.updateDisplayName(user.email!.split('@')[0]);
-                  }
-                  if (!user.emailVerified) {
-                    user.sendEmailVerification();
-                    const snackBar = SnackBar(
-                      content: Text(
-                        'Please check your email to verify your email address',
-                      ),
-                    );
-                    ScaffoldMessenger.of(context).showSnackBar(snackBar);
-                  }
-                  context.pushReplacement('/');
-                })),
-              ],
-            );
-          },
-          routes: [
-            GoRoute(
-              path: 'forgot-password',
-              builder: (context, state) {
-                final arguments = state.uri.queryParameters;
-                return ForgotPasswordScreen(
-                  email: arguments['email'],
-                  headerMaxExtent: 200,
-                );
-              },
+class BookExchangeApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'UniBooks Exchange',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.teal,
+        scaffoldBackgroundColor: Colors.grey[50],
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.teal,
+          elevation: 0,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.teal,
+            foregroundColor: Colors.white,
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
             ),
-          ],
+          ),
         ),
-        GoRoute(
-          path: 'profile',
-          builder: (context, state) {
-            return Consumer<ApplicationState>(
-              builder:
-                  (context, appState, _) => ProfileScreen(
-                    key: ValueKey(appState.emailVerified),
-                    providers: const [],
-                    actions: [
-                      SignedOutAction(((context) {
-                        context.pushReplacement('/');
-                      })),
-                    ],
-                    children: [
-                      Visibility(
-                        visible: !appState.emailVerified,
-                        child: OutlinedButton(
-                          child: const Text('Recheck Verification State'),
-                          onPressed: () {
-                            appState.refreshLoggedInUser();
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-            );
-          },
+        cardTheme: CardTheme(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
-      ],
-    ),
-  ],
-);
+      ),
+      home: MainScreen(),
+    );
+  }
+}
 
-class App extends StatelessWidget {
-  const App({super.key});
+class MainScreen extends StatefulWidget {
+  @override
+  _MainScreenState createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> {
+  int _selectedIndex = 0;
+  
+  final List<Widget> _screens = [
+    HomeScreen(),
+    MyListingsScreen(),
+    FavoritesScreen(),
+    ProfileScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'Firebase Meetup',
-      theme: ThemeData(
-        buttonTheme: Theme.of(
-          context,
-        ).buttonTheme.copyWith(highlightColor: Colors.deepPurple),
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        textTheme: GoogleFonts.robotoTextTheme(Theme.of(context).textTheme),
-        visualDensity: VisualDensity.adaptivePlatformDensity,
+    return Scaffold(
+      body: _screens[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: Colors.teal,
+        unselectedItemColor: Colors.grey,
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.book),
+            label: 'Browse',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.sell),
+            label: 'My Listings',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.favorite),
+            label: 'Favorites',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
       ),
-      routerConfig: _router,
     );
   }
 }
